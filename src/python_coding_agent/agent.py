@@ -1,6 +1,9 @@
 import json
 from functools import partial
 
+from openai import OpenAI
+from openai.types.responses import Response
+
 from .tools import PythonTool
 
 SYSTEM_PROMPT = """
@@ -14,7 +17,7 @@ You MUST follow this process:
 3. VERIFY:
     - If uncertain, call run_python to test ideas.
 4. IMPLEMENT:
-    - Only after verification, write the final code.
+    - Present the verified code as your final answer.
 
 Rules:
 - Do NOT write final code before VERIFY.
@@ -26,26 +29,28 @@ class CodingAgent:
 
     def __init__(
         self,
-        client,
-        model,
+        client: OpenAI,
+        model: str,
         max_turns: int = 10,
         tool_timeout: int = 30,
-    ):
+        system_prompt: str | None = None,
+    ) -> None:
         self.client = client
         self.model = model
         self.max_turns = max_turns
         self.tool_timeout = tool_timeout
+        self.system_prompt = system_prompt or SYSTEM_PROMPT
         self.tools = {
             PythonTool.name: partial(PythonTool.func, timeout=tool_timeout)
         }
 
     def call(
         self,
-        input: str,
-    ):
+        user_input: str,
+    ) -> Response:
         messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": input}
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user", "content": user_input}
         ]
 
         turn = 0
