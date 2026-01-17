@@ -1,6 +1,7 @@
 import json
 from functools import partial
 
+from dotenv import load_dotenv
 from openai import OpenAI
 from openai.types.responses import Response
 
@@ -29,12 +30,15 @@ class CodingAgent:
 
     def __init__(
         self,
-        client: OpenAI,
         model: str,
+        client: OpenAI | None = None,
         max_turns: int = 10,
         tool_timeout: int = 30,
         system_prompt: str | None = None,
     ) -> None:
+        if client is None:
+            load_dotenv()
+            client = OpenAI()
         self.client = client
         self.model = model
         self.max_turns = max_turns
