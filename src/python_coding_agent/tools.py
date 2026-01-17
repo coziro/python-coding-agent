@@ -2,32 +2,18 @@ import textwrap
 import tempfile
 import subprocess
 import sys
+from dataclasses import dataclass
+from typing import Callable
 
-TOOL_NAME = "run_python"
 
-TOOL_SCHEMA = {
-    "type": "function",
-    "name": TOOL_NAME,
-    "description": (
-        "Execute Python code."
-    ),
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "code": {
-                "type": "string",
-                "description": (
-                    "The Python code to execute."
-                ),
-            },
-        },
-        "required": ["code"],
-        "additionalProperties": False
-    },
-    "strict": True,
-}
+@dataclass
+class Tool:
+    name: str
+    func: Callable[..., str]
+    definition: dict
 
-def run_python(code: str) -> str:
+
+def run_python(code: str, timeout: int = 30) -> str:
     code = textwrap.dedent(code)
 
     with tempfile.NamedTemporaryFile(suffix=".py", delete=False) as f:
@@ -39,15 +25,33 @@ def run_python(code: str) -> str:
             args=[sys.executable, filename],
             capture_output=True,
             text=True,
-            timeout=5,  # FIXME
+            timeout=timeout,
         )
         return result.stdout + result.stderr
     except Exception as e:
         return str(e)
 
-TOOL_FUNC = run_python
 
-class PythonTool:
-    name = TOOL_NAME
-    func = run_python
-    schema = TOOL_SCHEMA
+PYTHON_TOOL_DEFINITION = {
+    "type": "function",
+    "name": "run_python",
+    "description": "Execute Python code and return stdout/stderr.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "code": {
+                "type": "string",
+                "description": "The Python code to execute.",
+            },
+        },
+        "required": ["code"],
+        "additionalProperties": False,
+    },
+    "strict": True,
+}
+
+PythonTool = Tool(
+    name="run_python",
+    func=run_python,
+    definition=PYTHON_TOOL_DEFINITION,
+)

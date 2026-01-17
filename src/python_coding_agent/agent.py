@@ -1,9 +1,7 @@
-from .tools import PythonTool
 import json
+from functools import partial
 
-TOOLS = {
-    PythonTool.name: PythonTool.func,
-}
+from .tools import PythonTool
 
 SYSTEM_PROMPT = """
 You are a python coding agent.
@@ -31,10 +29,15 @@ class CodingAgent:
         client,
         model,
         max_turns: int = 10,
+        tool_timeout: int = 30,
     ):
         self.client = client
         self.model = model
         self.max_turns = max_turns
+        self.tool_timeout = tool_timeout
+        self.tools = {
+            PythonTool.name: partial(PythonTool.func, timeout=tool_timeout)
+        }
 
     def call(
         self,
@@ -54,7 +57,7 @@ class CodingAgent:
             response = self.client.responses.create(
                 model=self.model,
                 input=messages,
-                tools=[PythonTool.schema]
+                tools=[PythonTool.definition]
             )
             messages.extend(response.output)
 
@@ -65,7 +68,7 @@ class CodingAgent:
             for tool_call in tool_calls:
                 print("execute function")
                 args = json.loads(tool_call.arguments)
-                func = TOOLS[tool_call.name]
+                func = self.tools[tool_call.name]
                 result = func(**args)
 
                 print("add function result to messages")
