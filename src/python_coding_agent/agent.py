@@ -28,6 +28,9 @@ Rules:
 - Do NOT write final code before VERIFY.
 - Use run_python when checking logic or examples.
 - Revise plan if verification fails.
+- Each run_python call runs in a separate process. Do not rely on variables or
+  functions defined in previous calls. Always include all necessary code in
+  each call.
 """
 
 class CodingAgent:
@@ -93,7 +96,18 @@ class CodingAgent:
                     "call_id": tool_call.call_id,
                     "output": result
                 })
-        
+
+        # If loop ended without a final message, request a summary
+        if not response.output_text:
+            logger.info("---- extra turn ----")
+            logger.info("no output_text yet, requesting final summary")
+            response = self.client.responses.create(
+                model=self.model,
+                input=messages,
+                tools=[]  # No tools, force a text response
+            )
+            _log_response(response)
+
         return response
 
     def __repr__(self) -> str:
