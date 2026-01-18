@@ -1,7 +1,10 @@
 import json
+import logging
 from functools import partial
 
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 from openai import OpenAI
 from openai.types.responses import Response
 
@@ -59,10 +62,10 @@ class CodingAgent:
 
         turn = 0
         while turn < self.max_turns:
-            print(f"turn: {turn}")
             turn += 1
+            logger.info(f"---- turn {turn} (max: {self.max_turns}) ----")
 
-            print("call llm")
+            logger.info("calling LLM")
             response = self.client.responses.create(
                 model=self.model,
                 input=messages,
@@ -72,15 +75,15 @@ class CodingAgent:
 
             tool_calls = [o for o in response.output if o.type == "function_call"]
             if len(tool_calls) == 0:
+                logger.info("no tool calls, done")
                 break
 
             for tool_call in tool_calls:
-                print("execute function")
+                logger.info(f"executing tool: {tool_call.name}")
                 args = json.loads(tool_call.arguments)
                 func = self.tools[tool_call.name]
                 result = func(**args)
 
-                print("add function result to messages")
                 messages.append({
                     "type": "function_call_output",
                     "call_id": tool_call.call_id,
